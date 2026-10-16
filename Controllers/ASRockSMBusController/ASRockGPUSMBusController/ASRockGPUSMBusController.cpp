@@ -197,3 +197,46 @@ void ASRockGPUSMBusController::SetChannelColor(uint8_t channel_idx, uint8_t red,
         LOG_WARNING("[ASRock GPU] Failed to set color for channel %d", channel_idx);
     }
 }
+
+void ASRockGPUSMBusController::SetChannelMode(uint8_t channel_idx, uint8_t mode, uint8_t red, uint8_t green, uint8_t blue, uint8_t speed, uint8_t brightness)
+{
+    /*-----------------------------------------------------*\
+    | Never send 0x10 or above, it hangs the MCU            |
+    \*-----------------------------------------------------*/
+    if(mode >= 0x10)
+    {
+        LOG_WARNING("[ASRock GPU] Refusing unsupported mode 0x%02X", mode);
+        return;
+    }
+
+    /*-----------------------------------------------------*\
+    | Hardware effect packet                                |
+    | Command 0x10, subcommand is the channel index         |
+    | All modes were mapped with bytes 6-7 set to 0. Their  |
+    | meaning is unverified (reportedly sync and music in   |
+    | Polychrome). The 0x1A sent by SetChannelColor comes   |
+    | from SignalRGB and is kept as-is for Direct mode.     |
+    \*-----------------------------------------------------*/
+    uint8_t data[8] =
+    {
+        mode,
+        red,
+        green,
+        blue,
+        speed,       // Effect speed, lower is faster
+        brightness,  // Brightness
+        0x00,        // Unverified
+        0x00         // Unverified
+    };
+
+    if(!WriteBlock(0x10, channel_idx, data, sizeof(data)))
+    {
+        LOG_WARNING("[ASRock GPU] Failed to set mode 0x%02X for channel %d", mode, channel_idx);
+    }
+
+    /*-----------------------------------------------------*\
+    | Give the MCU time to apply the effect before the next |
+    | packet, as Polychrome does                            |
+    \*-----------------------------------------------------*/
+    std::this_thread::sleep_for(50ms);
+}

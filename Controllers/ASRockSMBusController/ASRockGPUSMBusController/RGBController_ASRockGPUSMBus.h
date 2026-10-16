@@ -31,4 +31,6 @@ public:
 
 private:
     ASRockGPUSMBusController* controller;
+
+    void        AddHardwareMode(const char* mode_name, uint8_t mode_value, bool has_color, bool has_speed);
 };
